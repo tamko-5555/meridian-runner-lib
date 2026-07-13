@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from meridian.model import model
-from meridian.model.eda import eda_outcome, meridian_eda
+from meridian.model.eda import eda_engine, eda_outcome, meridian_eda
 
 from runner_lib import io
 
@@ -49,7 +49,13 @@ def _collect_outcomes(eda: meridian_eda.MeridianEDA) -> list:
     for prop in _EXTRA_OUTCOME_PROPS:
         try:
             outcomes.append(getattr(eda, prop))
-        except Exception as e:  # national専用モデル等で一部チェックが成立しない場合
+        except (eda_engine.GeoLevelCheckOnNationalModelError, ValueError) as e:
+            # meridian 1.7 は national モデル上で geo 専用チェックを呼ぶと
+            # inapplicable の意味でこれらの例外を送出する
+            # (geo_cost_per_media_unit / geo_pairwise_correlation は
+            # GeoLevelCheckOnNationalModelError、geo_stdev は ValueError)。
+            # モデル形状に対して不適用なチェックのみを握りつぶし、
+            # それ以外の例外は呼び出し元まで伝播させて fail-closed にする。
             print(f"  (EDA check {prop} unavailable: {type(e).__name__})")
     return [o for o in outcomes if o is not None]
 
