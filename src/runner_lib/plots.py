@@ -102,17 +102,19 @@ def save_diagnostics(
 
     @_guarded("Trace Plot (beta_m)")
     def _trace():
-        az.plot_trace(
-            mmm.inference_data,
-            var_names=["beta_m"],
-            compact=False,
-            backend_kwargs={"constrained_layout": True},
-        )
-        plt.suptitle(f"Trace Plot (beta_m) : {setup_name}", fontsize=14)
-        plt.savefig(str(out_dir / f"{name}_trace_beta_m.png"), bbox_inches="tight")
-        if display:
-            plt.show()
-        plt.close("all")
+        try:
+            az.plot_trace(
+                mmm.inference_data,
+                var_names=["beta_m"],
+                compact=False,
+                backend_kwargs={"constrained_layout": True},
+            )
+            plt.suptitle(f"Trace Plot (beta_m) : {setup_name}", fontsize=14)
+            plt.savefig(str(out_dir / f"{name}_trace_beta_m.png"), bbox_inches="tight")
+            if display:
+                plt.show()
+        finally:
+            plt.close("all")
 
     _trace()
 
