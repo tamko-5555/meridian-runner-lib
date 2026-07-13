@@ -25,6 +25,20 @@ def test_default_period_clamps_to_available_range():
     assert end <= dates.max()
 
 
+def test_default_period_raises_when_no_date_before_last_month_end():
+    # 全データが最新日と同じ月内 → 先月末以前の実在日が存在しない
+    dates = _weekly("2025-06-01", 4)  # 2025-06-01..2025-06-22
+    with pytest.raises(ValueError, match="先月末"):
+        periods.default_analysis_period(dates)
+
+
+def test_default_period_raises_when_start_exceeds_end():
+    # 巨大な欠測: end候補(2023-01-01)より start候補(2025-06-15)が後になる
+    dates = pd.DatetimeIndex([pd.Timestamp("2023-01-01"), pd.Timestamp("2025-06-15")])
+    with pytest.raises(ValueError, match="期間が成立しません"):
+        periods.default_analysis_period(dates)
+
+
 def test_period_date_strings():
     dates = _weekly("2024-01-07", 10)
     strings = periods.period_date_strings(dates, dates[2], dates[5])
