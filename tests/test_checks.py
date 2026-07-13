@@ -42,3 +42,10 @@ def test_summary_table_and_exports(posterior_dir):
     assert csv_path.exists()
     text = csv_path.read_text(encoding="utf-8-sig")
     assert "beta_m" in text and "setup_normal" in text
+
+
+def test_json_safe_replaces_non_finite():
+    payload = {"a": float("inf"), "b": [float("nan"), 1.5], "c": {"d": -float("inf")}, "e": "x"}
+    cleaned = checks._json_safe(payload)
+    assert cleaned == {"a": None, "b": [None, 1.5], "c": {"d": None}, "e": "x"}
+    json.dumps(cleaned, allow_nan=False)  # raises if any non-finite slipped through

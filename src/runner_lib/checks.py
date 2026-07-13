@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import arviz as az
@@ -27,6 +28,17 @@ TARGET_PARAMS = (
 )
 
 RHAT_THRESHOLD = 1.05
+
+
+def _json_safe(obj):
+    """非有限float(inf/NaN)を null に落とし、RFC 8259準拠のJSONにする."""
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    return obj
 
 
 def _dim_labels(posterior, param: str, n_cols: int) -> list[str]:
@@ -166,7 +178,15 @@ def export_model_summaries_json(output_dir: str | Path) -> Path:
             "coefficients": coefficient_table(mmm).to_dict(orient="records"),
         }
     out = _checks_dir(output_dir) / "model_summaries.json"
-    out.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+    out.write_text(
+        json.dumps(
+            _json_safe(payload),
+            ensure_ascii=False,
+            indent=2,
+            allow_nan=False,
+            default=str,
+        )
+    )
     return out
 
 
