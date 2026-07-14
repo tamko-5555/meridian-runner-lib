@@ -28,6 +28,14 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     try:
+        if not 0.0 <= args.cost_rate < 1.0:
+            print(
+                f"エラー: cost_rate は 0 以上 1 未満で指定してください(例: 30% なら 0.3)。"
+                f" 指定値: {args.cost_rate}",
+                file=sys.stderr,
+            )
+            return constants.EXIT_FAILURE
+
         posterior = io.posterior_path(args.output_dir, args.setup_name)
         if not posterior.exists():
             raise FileNotFoundError(f"posterior binpb not found: {posterior}")

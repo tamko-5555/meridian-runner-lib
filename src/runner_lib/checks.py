@@ -29,6 +29,33 @@ TARGET_PARAMS = (
 
 RHAT_THRESHOLD = 1.05
 
+SUMMARY_COLUMNS = [
+    "setup",
+    "rhat_max",
+    "rhat_ok",
+    "R2",
+    "MAPE",
+    "health_score",
+    "review_status",
+    "knots",
+    "max_lag",
+    "paid_ch",
+    "organic_ch",
+    "nmt",
+    "controls",
+]
+
+COEFFICIENT_COLUMNS = [
+    "parameter",
+    "description",
+    "channel/dim",
+    "mean",
+    "sd",
+    "2.5%",
+    "97.5%",
+    "r_hat",
+]
+
 
 def _json_safe(obj):
     """非有限float(inf/NaN)を null に落とし、RFC 8259準拠のJSONにする."""
@@ -158,6 +185,9 @@ def summary_table(output_dir: str | Path) -> pd.DataFrame:
                 "controls": ", ".join(cfg["controls"]),
             }
         )
+    if not rows:
+        print(f"posterior が見つかりません: {output_dir}")
+        return pd.DataFrame(columns=SUMMARY_COLUMNS)
     return pd.DataFrame(rows)
 
 
@@ -177,6 +207,8 @@ def export_model_summaries_json(output_dir: str | Path) -> Path:
             "MAPE": mape,
             "coefficients": coefficient_table(mmm).to_dict(orient="records"),
         }
+    if not payload:
+        print(f"posterior が見つかりません: {output_dir}")
     out = _checks_dir(output_dir) / "model_summaries.json"
     out.write_text(
         json.dumps(
@@ -197,5 +229,11 @@ def export_coefficients_csv(output_dir: str | Path) -> Path:
         df.insert(0, "setup", name)
         frames.append(df)
     out = _checks_dir(output_dir) / "all_models_coefficients.csv"
+    if not frames:
+        print(f"posterior が見つかりません: {output_dir}")
+        pd.DataFrame(columns=["setup", *COEFFICIENT_COLUMNS]).to_csv(
+            out, index=False, encoding="utf-8-sig"
+        )
+        return out
     pd.concat(frames, ignore_index=True).to_csv(out, index=False, encoding="utf-8-sig")
     return out

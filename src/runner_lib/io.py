@@ -66,6 +66,8 @@ class SetupStatus:
 def list_setups(input_dir: str | Path, output_dir: str | Path) -> list[SetupStatus]:
     result = []
     for p in sorted(Path(input_dir).glob("*.binpb")):
+        if p.stem.startswith(constants.POSTERIOR_PREFIX):
+            continue
         name = p.stem
         if posterior_path(output_dir, name).exists():
             status = "done"

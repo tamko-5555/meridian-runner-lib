@@ -1,5 +1,7 @@
 import json
 
+import pandas as pd
+
 from runner_lib import checks
 
 
@@ -42,6 +44,22 @@ def test_summary_table_and_exports(posterior_dir):
     assert csv_path.exists()
     text = csv_path.read_text(encoding="utf-8-sig")
     assert "beta_m" in text and "setup_normal" in text
+
+
+def test_exports_handle_empty_dir(tmp_path):
+    df = checks.summary_table(tmp_path)
+    assert df.empty
+    assert list(df.columns) == checks.SUMMARY_COLUMNS
+
+    json_path = checks.export_model_summaries_json(tmp_path)
+    payload = json.loads(json_path.read_text())
+    assert payload == {}
+
+    csv_path = checks.export_coefficients_csv(tmp_path)
+    assert csv_path.exists()
+    csv_df = pd.read_csv(csv_path)
+    assert csv_df.empty
+    assert list(csv_df.columns) == ["setup", *checks.COEFFICIENT_COLUMNS]
 
 
 def test_json_safe_replaces_non_finite():

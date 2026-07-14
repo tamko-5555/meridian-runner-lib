@@ -1,5 +1,7 @@
 import shutil
 
+import pytest
+
 from runner_lib import constants, io, orchestrator, run_full
 
 
@@ -38,3 +40,16 @@ def test_run_full_generation_parses_targets(tmp_path, posterior_dir):
     assert results["setup_normal"] == "success"
     assert results["ghost"] == "not_found"
     assert io.full_binpb_path(tmp_path, "setup_normal").exists()
+
+
+def test_run_full_main_rejects_invalid_cost_rate(tmp_path):
+    rc = run_full.main(["--setup-name", "x", "--output-dir", str(tmp_path), "--cost-rate", "1.0"])
+    assert rc == constants.EXIT_FAILURE
+
+    rc2 = run_full.main(["--setup-name", "x", "--output-dir", str(tmp_path), "--cost-rate", "30"])
+    assert rc2 == constants.EXIT_FAILURE
+
+
+def test_run_full_generation_rejects_invalid_cost_rate(tmp_path):
+    with pytest.raises(ValueError):
+        orchestrator.run_full_generation("all", tmp_path, cost_rate=1.5)

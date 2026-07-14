@@ -15,6 +15,8 @@ _STATUS_LABELS = {"pending": "⏳ 未実行", "done": "✅ 完了", "eda_error":
 
 
 def setup_table(input_dir: str | Path, output_dir: str | Path) -> pd.DataFrame:
+    if not Path(input_dir).is_dir():
+        raise FileNotFoundError(f"INPUT_DIR が存在しません: {input_dir}")
     rows = [
         {"setup": s.name, "status": _STATUS_LABELS[s.status]}
         for s in io.list_setups(input_dir, output_dir)
@@ -39,6 +41,8 @@ def run_all_mcmc(
     eda_draws: int = 500,
     python_executable: str | None = None,
 ) -> pd.DataFrame:
+    if not Path(input_dir).is_dir():
+        raise FileNotFoundError(f"INPUT_DIR が存在しません: {input_dir}")
     py = python_executable or sys.executable
     setups = io.list_setups(input_dir, output_dir)
     print(f"対象: {len(setups)}件")
@@ -110,6 +114,11 @@ def run_full_generation(
     cost_rate: float = 0.0,
     python_executable: str | None = None,
 ) -> pd.DataFrame:
+    if not 0.0 <= cost_rate < 1.0:
+        raise ValueError(
+            f"エラー: cost_rate は 0 以上 1 未満で指定してください(例: 30% なら 0.3)。"
+            f" 指定値: {cost_rate}"
+        )
     py = python_executable or sys.executable
     targets = _parse_targets(target_setups, output_dir)
     print(f"完全版生成 対象: {len(targets)}件 (cost_rate={cost_rate})")

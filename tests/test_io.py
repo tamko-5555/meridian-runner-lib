@@ -37,6 +37,8 @@ def test_list_setups_status(tmp_path):
     (inp / "setup_a.binpb").write_bytes(b"x")
     (inp / "setup_b.binpb").write_bytes(b"x")
     (inp / "setup_c.binpb").write_bytes(b"x")
+    # INPUT_DIR == OUTPUT_DIR 誤設定時などに紛れ込む posterior ファイルはセットアップとして扱わない
+    (inp / f"{constants.POSTERIOR_PREFIX}stray.binpb").write_bytes(b"x")
     # a: posterior 済み
     (out / "posterior_setup_a.binpb").write_bytes(b"x")
     # b: EDA エラー記録あり

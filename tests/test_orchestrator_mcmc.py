@@ -1,3 +1,5 @@
+import pytest
+
 from runner_lib import io, orchestrator
 
 TINY = dict(n_chains=2, n_adapt=10, n_burnin=10, n_keep=10, seed=1, eda_draws=10)
@@ -7,6 +9,16 @@ def test_setup_table(tmp_path, setup_dir):
     df = orchestrator.setup_table(setup_dir, tmp_path)
     assert list(df.columns) == ["setup", "status"]
     assert set(df["setup"]) == {"setup_normal", "setup_broken"}
+
+
+def test_setup_table_missing_input_dir_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        orchestrator.setup_table(tmp_path / "missing", tmp_path)
+
+
+def test_run_all_mcmc_missing_input_dir_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        orchestrator.run_all_mcmc(tmp_path / "missing", tmp_path, **TINY)
 
 
 def test_run_all_mcmc_mixed_results_and_resume(tmp_path, setup_dir):
