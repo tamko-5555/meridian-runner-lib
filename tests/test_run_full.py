@@ -42,14 +42,29 @@ def test_run_full_generation_parses_targets(tmp_path, posterior_dir):
     assert io.full_binpb_path(tmp_path, "setup_normal").exists()
 
 
-def test_run_full_main_rejects_invalid_cost_rate(tmp_path):
-    rc = run_full.main(["--setup-name", "x", "--output-dir", str(tmp_path), "--cost-rate", "1.0"])
-    assert rc == constants.EXIT_FAILURE
-
-    rc2 = run_full.main(["--setup-name", "x", "--output-dir", str(tmp_path), "--cost-rate", "30"])
-    assert rc2 == constants.EXIT_FAILURE
+def test_run_full_main_rejects_invalid_cost_rate(tmp_path, posterior_dir, capsys):
+    shutil.copy(
+        posterior_dir / "posterior_setup_normal.binpb",
+        tmp_path / "posterior_setup_normal.binpb",
+    )
+    for cost_rate_value in ["1.0", "30"]:
+        rc = run_full.main(
+            [
+                "--setup-name",
+                "setup_normal",
+                "--output-dir",
+                str(tmp_path),
+                "--cost-rate",
+                cost_rate_value,
+            ]
+        )
+        assert rc == constants.EXIT_FAILURE
+        captured = capsys.readouterr()
+        assert "cost_rate は 0 以上 1 未満" in captured.err
+        assert "Traceback" not in captured.err
 
 
 def test_run_full_generation_rejects_invalid_cost_rate(tmp_path):
-    with pytest.raises(ValueError):
-        orchestrator.run_full_generation("all", tmp_path, cost_rate=1.5)
+    for cost_rate_value in [1.0, 1.5, 30]:
+        with pytest.raises(ValueError):
+            orchestrator.run_full_generation("all", tmp_path, cost_rate=cost_rate_value)
