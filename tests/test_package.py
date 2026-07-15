@@ -1,7 +1,12 @@
+import re
+
+
 def test_version():
     import runner_lib
 
-    assert runner_lib.__version__ == "0.1.0"
+    # バージョン値そのものはリリースごとに変わるため固定しない。
+    # パッケージングが機能していること(semver形式のバージョンが取れること)だけを検証する。
+    assert re.fullmatch(r"\d+\.\d+\.\d+", runner_lib.__version__)
 
 
 def test_meridian_dependency_importable():
