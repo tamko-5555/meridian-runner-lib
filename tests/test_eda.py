@@ -65,3 +65,14 @@ def test_save_eda_artifacts(tmp_path, unfitted_mmm):
     assert payload["has_error"] is False
     assert isinstance(payload["findings"], list)
     assert html_path.stat().st_size > 0
+
+
+def test_save_eda_artifacts_survives_report_failure(tmp_path, unfitted_mmm, monkeypatch):
+    eda_obj, result = eda.run_eda(unfitted_mmm, "normal", n_draws_prior=10)
+    monkeypatch.setattr(
+        eda_obj,
+        "generate_and_save_report",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    json_path, html_path = eda.save_eda_artifacts(eda_obj, result, tmp_path)
+    assert json_path.exists()  # JSONは書かれ、例外は伝播しない

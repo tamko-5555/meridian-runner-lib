@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from runner_lib import compat  # noqa: F401  # import 時に xarray の互換対策を適用  # isort: skip
+
 import dataclasses
 import json
 from pathlib import Path

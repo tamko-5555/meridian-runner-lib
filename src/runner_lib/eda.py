@@ -103,5 +103,8 @@ def save_eda_artifacts(
         "findings": [dataclasses.asdict(f) for f in result.findings],
     }
     json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
-    eda.generate_and_save_report(html_path.name, str(html_path.parent))
+    try:
+        eda.generate_and_save_report(html_path.name, str(html_path.parent))
+    except Exception as e:  # レポートは補助成果物: 失敗しても run は止めない
+        print(f"  ⚠ EDA HTMLレポート生成をスキップしました: {type(e).__name__}: {e}")
     return json_path, html_path
