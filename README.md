@@ -10,7 +10,7 @@ Batch-estimate and analyze multiple [Google Meridian](https://github.com/google/
 
 ## Install
 
-    pip install "meridian-runner-lib[colab] @ git+https://github.com/tamko-5555/meridian-runner-lib.git@v0.1.1"
+    pip install "meridian-runner-lib[colab] @ git+https://github.com/tamko-5555/meridian-runner-lib.git@v0.1.2"
 
 ## Usage (from a notebook)
 
