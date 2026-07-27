@@ -10,7 +10,7 @@ import sys
 import traceback
 from datetime import datetime
 
-from runner_lib import constants, full_binpb, io
+from runner_lib import constants, full_binpb, io, optimization
 
 
 def _log(msg: str) -> None:
@@ -50,6 +50,17 @@ def main(argv: list[str] | None = None) -> int:
         _log(f"saved: {result['binpb'].name} ({result['n_specs']} specs)")
         if result["geo_json"] is not None:
             _log(f"saved: {result['geo_json'].name}")
+
+        # 最適化成果物は補助出力。失敗しても full binpb の成功は維持する
+        _log("generate optimization artifacts")
+        try:
+            opt = optimization.save_optimization_artifacts(
+                mmm, args.setup_name, args.output_dir, cost_rate=args.cost_rate
+            )
+            _log(f"saved: {constants.OPTIMIZATION_DIRNAME}/ ({len(opt['files'])} files)")
+        except Exception:
+            traceback.print_exc()
+            _log("⚠ 最適化成果物の生成に失敗しました(full binpb と geo JSON は保存済み)")
         return constants.EXIT_OK
     except Exception:
         traceback.print_exc()

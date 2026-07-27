@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from meridian.analysis import visualizer
 from meridian.model import model
 
-from runner_lib import constants, io
+from runner_lib import constants, io, tables
 
 alt.data_transformers.disable_max_rows()
 
@@ -34,9 +34,12 @@ def save_chart(
 ) -> list[Path]:
     if chart is None:
         return []
+    tables.setup_japanese_fonts()
     if title is not None:
         try:
-            chart = chart.properties(title=title)
+            chart = chart.properties(
+                title=alt.TitleParams(text=title, font=tables.JP_FONT, fontSize=14)
+            )
         except Exception:
             pass
     if display:
@@ -95,7 +98,7 @@ def save_diagnostics(
         lambda: save_chart(
             mfit.plot_model_fit(show_geo_level=False, include_ci=True),
             out_dir / f"{name}_model_fit",
-            title=f"Model Fit : {setup_name}",
+            title=f"モデル適合(実測 vs 予測): {setup_name}",
             display=display,
         )
     )()
@@ -103,13 +106,14 @@ def save_diagnostics(
     @_guarded("Trace Plot (beta_m)")
     def _trace():
         try:
+            tables.setup_japanese_fonts()
             az.plot_trace(
                 mmm.inference_data,
                 var_names=["beta_m"],
                 compact=False,
                 backend_kwargs={"constrained_layout": True},
             )
-            plt.suptitle(f"Trace Plot (beta_m) : {setup_name}", fontsize=14)
+            plt.suptitle(f"トレースプロット(beta_m): {setup_name}", fontsize=14)
             plt.savefig(str(out_dir / f"{name}_trace_beta_m.png"), bbox_inches="tight")
             if display:
                 plt.show()
@@ -123,7 +127,7 @@ def save_diagnostics(
             lambda p=param: save_chart(
                 diag.plot_prior_and_posterior_distribution(parameter=p),
                 out_dir / f"{name}_prior_posterior_{p}",
-                title=f"Prior vs Posterior ({p}) : {setup_name}",
+                title=f"事前分布 vs 事後分布({p}): {setup_name}",
                 display=display,
             )
         )()
@@ -146,28 +150,28 @@ def save_media_charts(
     chart_makers = [
         (
             "contribution_waterfall",
-            "Contribution Waterfall",
+            "貢献度ウォーターフォール",
             media_summary.plot_contribution_waterfall_chart,
         ),
         (
             "contribution_pie",
-            "Contribution Pie",
+            "貢献度の内訳(円グラフ)",
             media_summary.plot_contribution_pie_chart,
         ),
         (
             "spend_vs_contribution",
-            "Spend vs Contribution",
+            "コストシェア vs 貢献度",
             media_summary.plot_spend_vs_contribution,
         ),
         (
             "roi_bar",
-            "ROI by Channel",
+            "チャネル別ROI(信用区間つき)",
             lambda: media_summary.plot_roi_bar_chart(include_ci=True),
         ),
-        ("roi_vs_mroi", "ROI vs mROI", media_summary.plot_roi_vs_mroi),
+        ("roi_vs_mroi", "ROI vs 限界ROI", media_summary.plot_roi_vs_mroi),
         (
             "response_curves_all",
-            "Response Curves All",
+            "応答曲線(全チャネル)",
             lambda: media_effects.plot_response_curves(
                 selected_times=selected_times,
                 plot_separately=False,
@@ -177,14 +181,14 @@ def save_media_charts(
         ),
         (
             "response_curves_separate",
-            "Response Curves Separate",
+            "応答曲線(チャネル別・信用区間つき)",
             lambda: media_effects.plot_response_curves(
                 selected_times=selected_times, plot_separately=True, include_ci=True
             ),
         ),
         (
             "adstock_decay",
-            "Adstock Decay",
+            "アドストック減衰",
             lambda: media_effects.plot_adstock_decay(include_ci=True),
         ),
     ]
@@ -193,21 +197,21 @@ def save_media_charts(
             lambda m=make, s=suffix, t=title: save_chart(
                 m(),
                 out_dir / f"{name}_{s}",
-                title=f"{t} : {setup_name}",
+                title=f"{t}: {setup_name}",
                 display=display,
             )
         )()
 
-    _guarded("Hill Curves")(
+    _guarded("Hill飽和曲線")(
         lambda: _save_chart_or_mapping(
             media_effects.plot_hill_curves(include_prior=True, include_ci=True),
             out_dir / f"{name}_hill_curves",
-            title_prefix=f"Hill Curves : {setup_name}",
+            title_prefix=f"Hill飽和曲線: {setup_name}",
             display=display,
         )
     )()
 
-    @_guarded("Summary table")
+    @_guarded("メディアサマリー表")
     def _table():
         table = media_summary.summary_table(
             include_prior=False,
@@ -216,10 +220,10 @@ def save_media_charts(
         )
         if display:
             _display(table)
-        table.to_csv(
-            out_dir / f"{name}_media_summary_table.csv",
-            index=False,
-            encoding="utf-8-sig",
+        tables.save_table_csv_and_image(
+            table,
+            out_dir / f"{name}_media_summary_table",
+            title=f"メディアサマリー表: {setup_name}",
         )
 
     _table()

@@ -13,7 +13,7 @@ from meridian.analysis import visualizer
 from meridian.analysis.review import reviewer
 from meridian.model import model
 
-from runner_lib import constants, io
+from runner_lib import constants, io, tables
 
 TARGET_PARAMS = (
     ("beta_m", "media係数"),
@@ -235,5 +235,18 @@ def export_coefficients_csv(output_dir: str | Path) -> Path:
             out, index=False, encoding="utf-8-sig"
         )
         return out
-    pd.concat(frames, ignore_index=True).to_csv(out, index=False, encoding="utf-8-sig")
+    tables.save_table_csv_and_image(
+        pd.concat(frames, ignore_index=True),
+        out.with_suffix(""),
+        title="全モデル 係数サマリー",
+    )
     return out
+
+
+def export_summary_table(output_dir: str | Path, df: pd.DataFrame | None = None) -> Path:
+    """比較テーブルを checks/ に CSV+表画像で保存する(df を渡すと再計算しない)."""
+    if df is None:
+        df = summary_table(output_dir)
+    base = _checks_dir(output_dir) / "all_models_summary"
+    tables.save_table_csv_and_image(df, base, title="全モデル比較テーブル")
+    return base.with_suffix(".csv")

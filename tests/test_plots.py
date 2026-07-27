@@ -15,4 +15,5 @@ def test_save_all_for_dir_creates_chart_files(posterior_dir):
     assert any("contribution_waterfall" in f for f in files)
     assert any("adstock_decay" in f for f in files)
     assert any(f.endswith("_media_summary_table.csv") for f in files)
+    assert any(f.endswith("_media_summary_table.png") for f in files)  # 表画像も出力される
     assert any("trace_beta_m" in f and f.endswith(".png") for f in files)

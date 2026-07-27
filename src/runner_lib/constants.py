@@ -8,3 +8,5 @@ POSTERIOR_PREFIX = "posterior_"
 EDA_DIRNAME = "eda"
 CHECKS_DIRNAME = "checks"
 FULL_DIRNAME = "full"
+OPTIMIZATION_DIRNAME = "optimization"
+HEALTH_DIRNAME = "health"  # checks/health/ に配置

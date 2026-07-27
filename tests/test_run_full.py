@@ -23,6 +23,10 @@ def test_run_full_main_success(tmp_path, posterior_dir):
     assert rc == constants.EXIT_OK
     assert io.full_binpb_path(tmp_path, "setup_normal").exists()
     assert io.geo_json_path(tmp_path, "setup_normal").exists()  # fixtureはgeoモデル
+    # 最適化成果物も同時に生成される
+    opt_dir = tmp_path / constants.OPTIMIZATION_DIRNAME
+    assert (opt_dir / "setup_normal_budget_scenarios.csv").exists()
+    assert (opt_dir / "setup_normal_optimization_summary.html").exists()
 
 
 def test_run_full_main_missing_posterior(tmp_path):
