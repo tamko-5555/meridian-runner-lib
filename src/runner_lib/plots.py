@@ -34,12 +34,9 @@ def save_chart(
 ) -> list[Path]:
     if chart is None:
         return []
-    tables.setup_japanese_fonts()
     if title is not None:
         try:
-            chart = chart.properties(
-                title=alt.TitleParams(text=title, font=tables.JP_FONT, fontSize=14)
-            )
+            chart = chart.properties(title=title)
         except Exception:
             pass
     if display:
@@ -98,7 +95,7 @@ def save_diagnostics(
         lambda: save_chart(
             mfit.plot_model_fit(show_geo_level=False, include_ci=True),
             out_dir / f"{name}_model_fit",
-            title=f"モデル適合(実測 vs 予測): {setup_name}",
+            title=f"Model Fit : {setup_name}",
             display=display,
         )
     )()
@@ -106,14 +103,13 @@ def save_diagnostics(
     @_guarded("Trace Plot (beta_m)")
     def _trace():
         try:
-            tables.setup_japanese_fonts()
             az.plot_trace(
                 mmm.inference_data,
                 var_names=["beta_m"],
                 compact=False,
                 backend_kwargs={"constrained_layout": True},
             )
-            plt.suptitle(f"トレースプロット(beta_m): {setup_name}", fontsize=14)
+            plt.suptitle(f"Trace Plot (beta_m) : {setup_name}", fontsize=14)
             plt.savefig(str(out_dir / f"{name}_trace_beta_m.png"), bbox_inches="tight")
             if display:
                 plt.show()
@@ -127,7 +123,7 @@ def save_diagnostics(
             lambda p=param: save_chart(
                 diag.plot_prior_and_posterior_distribution(parameter=p),
                 out_dir / f"{name}_prior_posterior_{p}",
-                title=f"事前分布 vs 事後分布({p}): {setup_name}",
+                title=f"Prior vs Posterior ({p}) : {setup_name}",
                 display=display,
             )
         )()
@@ -150,28 +146,28 @@ def save_media_charts(
     chart_makers = [
         (
             "contribution_waterfall",
-            "貢献度ウォーターフォール",
+            "Contribution Waterfall",
             media_summary.plot_contribution_waterfall_chart,
         ),
         (
             "contribution_pie",
-            "貢献度の内訳(円グラフ)",
+            "Contribution Pie",
             media_summary.plot_contribution_pie_chart,
         ),
         (
             "spend_vs_contribution",
-            "コストシェア vs 貢献度",
+            "Spend vs Contribution",
             media_summary.plot_spend_vs_contribution,
         ),
         (
             "roi_bar",
-            "チャネル別ROI(信用区間つき)",
+            "ROI by Channel",
             lambda: media_summary.plot_roi_bar_chart(include_ci=True),
         ),
-        ("roi_vs_mroi", "ROI vs 限界ROI", media_summary.plot_roi_vs_mroi),
+        ("roi_vs_mroi", "ROI vs mROI", media_summary.plot_roi_vs_mroi),
         (
             "response_curves_all",
-            "応答曲線(全チャネル)",
+            "Response Curves All",
             lambda: media_effects.plot_response_curves(
                 selected_times=selected_times,
                 plot_separately=False,
@@ -181,14 +177,14 @@ def save_media_charts(
         ),
         (
             "response_curves_separate",
-            "応答曲線(チャネル別・信用区間つき)",
+            "Response Curves Separate",
             lambda: media_effects.plot_response_curves(
                 selected_times=selected_times, plot_separately=True, include_ci=True
             ),
         ),
         (
             "adstock_decay",
-            "アドストック減衰",
+            "Adstock Decay",
             lambda: media_effects.plot_adstock_decay(include_ci=True),
         ),
     ]
@@ -197,21 +193,21 @@ def save_media_charts(
             lambda m=make, s=suffix, t=title: save_chart(
                 m(),
                 out_dir / f"{name}_{s}",
-                title=f"{t}: {setup_name}",
+                title=f"{t} : {setup_name}",
                 display=display,
             )
         )()
 
-    _guarded("Hill飽和曲線")(
+    _guarded("Hill Curves")(
         lambda: _save_chart_or_mapping(
             media_effects.plot_hill_curves(include_prior=True, include_ci=True),
             out_dir / f"{name}_hill_curves",
-            title_prefix=f"Hill飽和曲線: {setup_name}",
+            title_prefix=f"Hill Curves : {setup_name}",
             display=display,
         )
     )()
 
-    @_guarded("メディアサマリー表")
+    @_guarded("Summary table")
     def _table():
         table = media_summary.summary_table(
             include_prior=False,
@@ -220,10 +216,16 @@ def save_media_charts(
         )
         if display:
             _display(table)
-        tables.save_table_csv_and_image(
+        table.to_csv(
+            out_dir / f"{name}_media_summary_table.csv",
+            index=False,
+            encoding="utf-8-sig",
+        )
+        # v0.2.0 追加分: CSV と同内容の表画像(既存の CSV 出力は従来どおり)
+        tables.save_table_image(
             table,
-            out_dir / f"{name}_media_summary_table",
-            title=f"メディアサマリー表: {setup_name}",
+            out_dir / f"{name}_media_summary_table.png",
+            title=f"Media Summary : {setup_name}",
         )
 
     _table()

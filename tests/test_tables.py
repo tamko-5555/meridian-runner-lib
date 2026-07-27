@@ -39,9 +39,15 @@ def test_save_table_csv_and_image(tmp_path):
     assert raw.startswith(b"\xef\xbb\xbf")
 
 
-def test_setup_japanese_fonts_idempotent():
-    tables.setup_japanese_fonts()
-    tables.setup_japanese_fonts()  # 2回呼んでも例外にならない
+def test_setup_japanese_fonts_registers_without_changing_default():
     import matplotlib
 
-    assert "IPAexGothic" in matplotlib.rcParams["font.family"]
+    before = list(matplotlib.rcParams["font.family"])
+    tables.setup_japanese_fonts()
+    tables.setup_japanese_fonts()  # 2回呼んでも例外にならない
+    # 既定フォント(rcParams)は変更しない — 既存グラフの見た目を変えない契約
+    assert list(matplotlib.rcParams["font.family"]) == before
+    # IPAexGothic は「利用可能なフォント」として登録されている
+    from matplotlib import font_manager
+
+    assert any(f.name == tables.JP_FONT for f in font_manager.fontManager.ttflist)

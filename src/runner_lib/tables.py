@@ -17,22 +17,42 @@ _FONT_SIZE = 9
 _fonts_ready = False
 
 
+def _japanize_fonts_dir() -> Path:
+    """japanize-matplotlib 同梱フォントのディレクトリ(モジュールは import しない).
+
+    japanize_matplotlib を import すると matplotlib の既定フォント(rcParams)が
+    グローバルに書き換わり、既存グラフの見た目が変わってしまうため、
+    フォントファイルの場所だけを取得して個別に登録する。
+    """
+    import importlib.util
+
+    spec = importlib.util.find_spec("japanize_matplotlib")
+    if spec is None or spec.origin is None:
+        raise ModuleNotFoundError("japanize_matplotlib が見つかりません")
+    return Path(spec.origin).parent / "fonts"
+
+
 def setup_japanese_fonts() -> None:
     """matplotlib と Altair PNG 出力(vl-convert)の両方で日本語を描画可能にする.
 
-    japanize-matplotlib 同梱の IPAexGothic を matplotlib に登録して既定フォントにし、
-    同じフォントファイルを vl-convert にも登録する(PNG のグリフフォールバックに使われる)。
-    冪等なので何度呼んでもよい。
+    IPAexGothic を「利用可能なフォント」として登録するだけで、既定フォントは変更しない
+    (既存グラフの見た目に影響を与えないため)。日本語を使う描画側が明示的に
+    JP_FONT を指定する。冪等なので何度呼んでもよい。
     """
     global _fonts_ready
     if _fonts_ready:
         return
-    import japanize_matplotlib
+    fonts_dir = _japanize_fonts_dir()
+
+    from matplotlib import font_manager
+
+    for font_file in fonts_dir.glob("*.ttf"):
+        font_manager.fontManager.addfont(str(font_file))
 
     try:
         import vl_convert as vlc
 
-        vlc.register_font_directory(str(Path(japanize_matplotlib.__file__).parent / "fonts"))
+        vlc.register_font_directory(str(fonts_dir))
     except Exception as e:
         # vl-convert 側の登録に失敗しても HTML 出力と matplotlib 出力には影響しない
         print(f"  ⚠ Altair PNG の日本語フォント登録をスキップ: {type(e).__name__}")
@@ -101,17 +121,19 @@ def save_table_image(
         total_w = sum(col_widths)
         for (row, col), cell in tbl.get_celld().items():
             cell.set_width(col_widths[col] / total_w)
+            # 既定フォントは変更していないため、セル単位で日本語フォントを指定する
             if row == 0:
-                cell.set_text_props(weight="bold")
+                cell.set_text_props(weight="bold", fontfamily=JP_FONT)
                 cell.set_facecolor("#e8eef7")
             else:
+                cell.set_text_props(fontfamily=JP_FONT)
                 cell.set_height(0.9 * row_heights[row - 1] / max(sum(row_heights), 1))
         if title:
             note = f"(先頭{max_rows}行のみ表示。全{len(df)}行はCSVを参照)" if truncated else ""
-            ax.set_title(f"{title}{note}", fontsize=12, pad=12)
+            ax.set_title(f"{title}{note}", fontsize=12, pad=12, fontfamily=JP_FONT)
         elif truncated:
             note = f"(先頭{max_rows}行のみ表示。全{len(df)}行はCSVを参照)"
-            ax.set_title(note, fontsize=10, pad=12)
+            ax.set_title(note, fontsize=10, pad=12, fontfamily=JP_FONT)
         fig.savefig(out_path, bbox_inches="tight", dpi=150)
     finally:
         plt.close(fig)
