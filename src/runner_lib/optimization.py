@@ -271,3 +271,61 @@ def save_optimization_artifacts(
     )()
 
     return {"dir": out_dir, "files": saved, "sweep": sweep}
+
+
+_DISPLAY_ITEMS = (
+    ("budget_allocation", "予算配分(左: 現在 / 右: 最適化後)"),
+    ("spend_delta", "チャネル別の予算増減額"),
+    ("outcome_delta", "最適化による増分リターンの内訳"),
+    ("response_curves", "応答曲線と現在→最適スペンド"),
+)
+
+
+def display_saved(output_dir: str | Path, setup_name: str | None = None) -> None:
+    """optimization/ に保存済みの成果物をノートブック上で表示する.
+
+    Phase 3(run_full)実行後に呼ぶ。setup_name を省略すると保存済みの
+    全セットアップを順に表示する。
+    """
+    opt_dir = Path(output_dir) / constants.OPTIMIZATION_DIRNAME
+    suffix = "_budget_scenarios.csv"
+    if setup_name:
+        names = [plots.safe_filename(setup_name)]
+    else:
+        names = sorted(p.name[: -len(suffix)] for p in opt_dir.glob(f"*{suffix}"))
+    if not opt_dir.is_dir() or not names:
+        print(f"最適化成果物が見つかりません: {opt_dir}")
+        print("Phase 3(完全版生成)を実行すると生成されます。")
+        print("実行済みなのに無い場合は、Phase 3 の実行ログを確認してください。")
+        return
+
+    try:
+        from IPython.display import Image, Markdown, display
+    except ImportError:
+        for name in names:
+            print(f"[{name}] 保存済みファイル:")
+            for p in sorted(opt_dir.glob(f"{name}_*")):
+                print(f"  {p}")
+        return
+
+    for name in names:
+        display(Markdown(f"## 最適化結果: {name}"))
+        for stem, caption in _DISPLAY_ITEMS:
+            png = opt_dir / f"{name}_{stem}.png"
+            if png.exists():
+                display(Markdown(f"**{caption}**"))
+                display(Image(filename=str(png)))
+        csv = opt_dir / f"{name}{suffix}"
+        if csv.exists():
+            display(Markdown("**予算シナリオ別の期待リターン**(表画像・CSVも保存済み)"))
+            display(pd.read_csv(csv))
+        chart_png = opt_dir / f"{name}_budget_scenarios_chart.png"
+        if chart_png.exists():
+            display(Image(filename=str(chart_png)))
+        table_png = opt_dir / f"{name}_optimized_allocation.png"
+        if table_png.exists():
+            display(Markdown("**チャネル別予算配分: 現在 vs 最適**"))
+            display(Image(filename=str(table_png)))
+        html = opt_dir / f"{name}_optimization_summary.html"
+        if html.exists():
+            display(Markdown(f"公式最適化サマリHTML: `{html}`(ブラウザで開けます)"))

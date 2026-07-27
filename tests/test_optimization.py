@@ -53,3 +53,16 @@ def test_budget_sweep_table_contract(opt_artifacts):
     assert base_row["現行比の追加リターン"] == 0
     # 限界ROI は先頭行以外で計算される
     assert sweep["限界ROI(1つ下の予算比)"].iloc[1:].notna().all()
+
+
+def test_display_saved_smoke(opt_artifacts):
+    out_dir, _ = opt_artifacts
+    optimization.display_saved(out_dir)  # 例外なく表示できる(IPython 有無どちらでも)
+    optimization.display_saved(out_dir, "setup_normal")
+
+
+def test_display_saved_reports_missing(tmp_path, capsys):
+    optimization.display_saved(tmp_path)
+    out = capsys.readouterr().out
+    assert "見つかりません" in out
+    assert "Phase 3" in out

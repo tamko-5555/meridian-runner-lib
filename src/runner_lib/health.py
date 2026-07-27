@@ -15,26 +15,48 @@ from meridian.model import model
 
 from runner_lib import checks, constants, plots, tables
 
-# ModelReviewer が実行する全チェック(結果クラス名 → 日本語ラベル)。
-# 収束に失敗すると収束以外はスキップされ、summary.results に現れない。
+# ModelReviewer.run()(meridian 1.7.0)が実際に実行するチェックのみ列挙する。
+# ImplausibleROI / HighVariance / PotentialBias はクラスとして存在するが
+# run() の実行バッテリーに含まれていないため、表示対象にしない。
 CHECK_LABELS_JA = {
     "ConvergenceCheckResult": "収束(R-hat)",
     "GoodnessOfFitCheckResult": "適合度(R²/MAPE)",
     "BayesianPPPCheckResult": "事後予測チェック(PPP)",
     "BaselineCheckResult": "ベースライン妥当性",
-    "ImplausibleROICheckResult": "非現実的なROI",
-    "HighVarianceCheckResult": "ROIの高分散チャネル",
-    "PotentialBiasCheckResult": "潜在バイアス(spendとKPIの相関)",
     "PriorPosteriorShiftCheckResult": "事前→事後の分布シフト",
     "ROIConsistencyCheckResult": "ROIの整合性(事前分布比)",
 }
 SKIPPED_MARK = "—(未実施)"
+NOT_CONVERGED_MARK = "—(未収束のためスキップ)"
+# ModelReviewer.run() の条件付きスキップ(モデル構成上そもそも対象外のケース)
+NOT_APPLICABLE_MARKS = {
+    "PriorPosteriorShiftCheckResult": "—(対象外: ROI事前分布を使用していない)",
+    "ROIConsistencyCheckResult": "—(対象外: カスタムROI事前分布が未設定)",
+}
 
 
 def run_review(mmm: model.Meridian) -> review_results.ReviewSummary:
     return reviewer.ModelReviewer(
         model_context=mmm.model_context, inference_data=mmm.inference_data
     ).run()
+
+
+def _is_not_converged(summary: review_results.ReviewSummary) -> bool:
+    for r in summary.results:
+        if isinstance(r, review_results.ConvergenceCheckResult):
+            return r.case is review_results.ConvergenceCases.NOT_CONVERGED
+    return False
+
+
+def _absent_mark(cls_name: str, summary: review_results.ReviewSummary) -> str:
+    """results に現れなかったチェックの理由つきマークを返す.
+
+    meridian の ModelReviewer.run() は、(1) 未収束なら収束以外を全てスキップ、
+    (2) ROI事前分布の使い方によっては 事前→事後シフト / ROI整合性 を対象外にする。
+    """
+    if _is_not_converged(summary):
+        return NOT_CONVERGED_MARK
+    return NOT_APPLICABLE_MARKS.get(cls_name, SKIPPED_MARK)
 
 
 def health_detail_table(summary: review_results.ReviewSummary) -> pd.DataFrame:
@@ -51,7 +73,14 @@ def health_detail_table(summary: review_results.ReviewSummary) -> pd.DataFrame:
     for cls_name, label in CHECK_LABELS_JA.items():
         r = by_name.get(cls_name)
         if r is None:
-            rows.append({"チェック": label, "判定": SKIPPED_MARK, "推奨アクション": "", "詳細": ""})
+            rows.append(
+                {
+                    "チェック": label,
+                    "判定": _absent_mark(cls_name, summary),
+                    "推奨アクション": "",
+                    "詳細": "",
+                }
+            )
             continue
         rows.append(
             {
@@ -107,7 +136,7 @@ def export_health_artifacts(output_dir: str | Path) -> pd.DataFrame:
             "ヘルススコア": round(float(summary.health_score), 1),
         }
         for cls_name, label in CHECK_LABELS_JA.items():
-            row[label] = str(summary.checks_status.get(cls_name, SKIPPED_MARK))
+            row[label] = str(summary.checks_status.get(cls_name, _absent_mark(cls_name, summary)))
         matrix_rows.append(row)
 
     if not matrix_rows:

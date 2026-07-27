@@ -4,12 +4,23 @@ from runner_lib import constants, health
 def test_health_detail_table_lists_all_checks(fitted_mmm):
     summary = health.run_review(fitted_mmm)
     df = health.health_detail_table(summary)
-    # 総合判定 + 全チェック分の行がある(スキップされたチェックも行として現れる)
+    # 総合判定 + 実行対象チェック分の行がある(スキップされたチェックも行として現れる)
     assert len(df) == 1 + len(health.CHECK_LABELS_JA)
     assert df.iloc[0]["チェック"] == "総合判定"
     assert set(df.columns) == {"チェック", "判定", "推奨アクション", "詳細"}
-    # 極小MCMCでは未収束→収束以外はスキップされるのが meridian の仕様
-    assert (df["判定"] == health.SKIPPED_MARK).any()
+    # 極小MCMCでは未収束→収束以外はスキップされ、理由つきで表示される
+    assert (df["判定"] == health.NOT_CONVERGED_MARK).any()
+    # 意味のない「未実施」だけの表示はしない
+    assert not (df["判定"] == health.SKIPPED_MARK).any()
+
+
+def test_check_labels_cover_only_executed_battery():
+    """run() が実行しないチェック(ImplausibleROI等)を表示対象にしない契約."""
+    assert "ImplausibleROICheckResult" not in health.CHECK_LABELS_JA
+    assert "HighVarianceCheckResult" not in health.CHECK_LABELS_JA
+    assert "PotentialBiasCheckResult" not in health.CHECK_LABELS_JA
+    # 条件付きスキップの2チェックには対象外の理由文がある
+    assert set(health.NOT_APPLICABLE_MARKS) <= set(health.CHECK_LABELS_JA)
 
 
 def test_export_health_artifacts(posterior_dir):

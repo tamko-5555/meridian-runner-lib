@@ -59,7 +59,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             _log(f"saved: {constants.OPTIMIZATION_DIRNAME}/ ({len(opt['files'])} files)")
         except Exception:
-            traceback.print_exc()
+            # orchestrator は成功時 stdout しか表示しないため、traceback も stdout に出す
+            traceback.print_exc(file=sys.stdout)
             _log("⚠ 最適化成果物の生成に失敗しました(full binpb と geo JSON は保存済み)")
         return constants.EXIT_OK
     except Exception:

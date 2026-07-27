@@ -123,11 +123,15 @@ def run_full_generation(
     targets = _parse_targets(target_setups, output_dir)
     print(f"完全版生成 対象: {len(targets)}件 (cost_rate={cost_rate})")
     rows = []
+    from runner_lib.plots import safe_filename
+
     for name in targets:
         t0 = time.time()
         if not io.posterior_path(output_dir, name).exists():
             print(f"❌ posterior が見つかりません: {name}")
-            rows.append({"setup": name, "result": "not_found", "elapsed_sec": 0.0})
+            rows.append(
+                {"setup": name, "result": "not_found", "optimization": "-", "elapsed_sec": 0.0}
+            )
             continue
         print(f"\n🚀 start: {name}")
         proc = subprocess.run(
@@ -154,7 +158,25 @@ def run_full_generation(
             result = "failed"
             print(f"❌ 失敗: {name} (returncode={proc.returncode})")
             _print_stderr_tail(proc.stderr)
-        rows.append({"setup": name, "result": result, "elapsed_sec": round(time.time() - t0, 1)})
-    df = pd.DataFrame(rows, columns=["setup", "result", "elapsed_sec"])
+
+        # 最適化成果物は run_full 内で失敗しても exit code 0 のままなので、
+        # 保存物の有無を確認して結果テーブルで可視化する
+        opt_marker = (
+            Path(output_dir)
+            / constants.OPTIMIZATION_DIRNAME
+            / f"{safe_filename(name)}_budget_scenarios.csv"
+        )
+        optimization_status = "saved" if opt_marker.exists() else "missing"
+        if result == "success" and optimization_status == "missing":
+            print(f"⚠ {name}: optimization/ が生成されていません(上のログを確認してください)")
+        rows.append(
+            {
+                "setup": name,
+                "result": result,
+                "optimization": optimization_status,
+                "elapsed_sec": round(time.time() - t0, 1),
+            }
+        )
+    df = pd.DataFrame(rows, columns=["setup", "result", "optimization", "elapsed_sec"])
     print(f"\n🏁 完全版生成完了: {df['result'].value_counts().to_dict()}")
     return df

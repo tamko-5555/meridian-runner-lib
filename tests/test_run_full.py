@@ -44,6 +44,10 @@ def test_run_full_generation_parses_targets(tmp_path, posterior_dir):
     assert results["setup_normal"] == "success"
     assert results["ghost"] == "not_found"
     assert io.full_binpb_path(tmp_path, "setup_normal").exists()
+    # 最適化成果物の有無が結果テーブルで可視化される
+    opt_status = dict(zip(df["setup"], df["optimization"]))
+    assert opt_status["setup_normal"] == "saved"
+    assert opt_status["ghost"] == "-"
 
 
 def test_run_full_main_rejects_invalid_cost_rate(tmp_path, posterior_dir, capsys):
