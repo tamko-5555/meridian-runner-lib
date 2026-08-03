@@ -27,6 +27,10 @@ def test_run_full_main_success(tmp_path, posterior_dir):
     opt_dir = tmp_path / "setup_normal" / constants.OPTIMIZATION_DIRNAME
     assert (opt_dir / "setup_normal_budget_scenarios.csv").exists()
     assert (opt_dir / "setup_normal_optimization_summary.html").exists()
+    # summary/ も生成される(waterfall は Phase 2 未実行のため missing でよい)
+    summary_dir = tmp_path / "summary"
+    assert (summary_dir / "setup_normal_geo_roi.png").exists()  # fixture は geo モデル
+    assert (summary_dir / "setup_normal_budget_allocation.png").exists()
 
 
 def test_run_full_main_missing_posterior(tmp_path):

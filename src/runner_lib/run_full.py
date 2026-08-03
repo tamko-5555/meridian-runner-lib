@@ -10,7 +10,7 @@ import sys
 import traceback
 from datetime import datetime
 
-from runner_lib import constants, full_binpb, io, optimization
+from runner_lib import constants, full_binpb, io, optimization, summary
 
 
 def _log(msg: str) -> None:
@@ -62,6 +62,14 @@ def main(argv: list[str] | None = None) -> int:
             # orchestrator は成功時 stdout しか表示しないため、traceback も stdout に出す
             traceback.print_exc(file=sys.stdout)
             _log("⚠ 最適化成果物の生成に失敗しました(full binpb と geo JSON は保存済み)")
+
+        # 意思決定用サマリー(summary/)。失敗しても full binpb の成功は維持する
+        _log("build summary artifacts")
+        try:
+            summary.build_summary(mmm, args.setup_name, args.output_dir)
+        except Exception:
+            traceback.print_exc(file=sys.stdout)
+            _log("⚠ summary の生成に失敗しました(full binpb と geo JSON は保存済み)")
         return constants.EXIT_OK
     except Exception:
         traceback.print_exc()

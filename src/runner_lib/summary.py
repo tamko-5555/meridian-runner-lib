@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import altair as alt
@@ -57,3 +58,44 @@ def save_geo_roi_chart(mmm: model.Meridian, setup_name: str, output_dir: str | P
         out_dir / f"{name}_geo_roi",
         title=f"地域別ROI: どの地域で広告が効いているか({setup_name})",
     )
+
+
+# 複製する成果物: (元フォルダ種別, ファイル名stem)。①と③④に対応(②は新規生成)
+_COPY_SOURCES = (
+    ("checks", "contribution_waterfall"),
+    ("optimization", "budget_allocation"),
+    ("optimization", "outcome_delta"),
+    ("optimization", "budget_scenarios"),
+    ("optimization", "budget_scenarios_chart"),
+)
+
+
+def build_summary(mmm: model.Meridian, setup_name: str, output_dir: str | Path) -> dict:
+    """summary/ を構築する: 地域別ROIバーの生成 + 主要グラフPNGの複製.
+
+    複製元が無い場合(例: Phase 2 未実行で waterfall が無い)は警告して続行する。
+    """
+    out_dir = io.summary_dir(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    name = plots.safe_filename(setup_name)
+
+    files = list(save_geo_roi_chart(mmm, setup_name, output_dir))
+    missing: list[str] = []
+    src_dirs = {
+        "checks": io.checks_dir(output_dir, setup_name),
+        "optimization": io.optimization_dir(output_dir, setup_name),
+    }
+    for kind, stem in _COPY_SOURCES:
+        src = src_dirs[kind] / f"{name}_{stem}.png"
+        if not src.exists():
+            missing.append(f"{kind}/{name}_{stem}.png")
+            continue
+        dst = out_dir / src.name
+        shutil.copy2(src, dst)
+        files.append(dst)
+    if missing:
+        print(f"  ⚠ summary 複製元が見つかりません(スキップ): {', '.join(missing)}")
+        if any(m.startswith("checks/") for m in missing):
+            print("    → Phase 2(グラフ一式の生成)を実行してから Phase 3 を再実行すると揃います")
+    print(f"  ✔ summary/ に {len(files)} ファイル")
+    return {"files": files, "missing": missing}
