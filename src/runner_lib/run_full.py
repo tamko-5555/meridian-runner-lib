@@ -57,7 +57,10 @@ def main(argv: list[str] | None = None) -> int:
             opt = optimization.save_optimization_artifacts(
                 mmm, args.setup_name, args.output_dir, cost_rate=args.cost_rate
             )
-            _log(f"saved: {constants.OPTIMIZATION_DIRNAME}/ ({len(opt['files'])} files)")
+            _log(
+                f"saved: {io.safe_filename(args.setup_name)}/"
+                f"{constants.OPTIMIZATION_DIRNAME}/ ({len(opt['files'])} files)"
+            )
         except Exception:
             # orchestrator は成功時 stdout しか表示しないため、traceback も stdout に出す
             traceback.print_exc(file=sys.stdout)

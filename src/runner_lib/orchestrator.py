@@ -87,7 +87,7 @@ def run_all_mcmc(
             print(f"✅ 完了: {s.name}")
         elif proc.returncode == constants.EXIT_EDA_ERROR:
             result = "eda_error"
-            print(f"🚫 EDAエラーによりスキップ: {s.name}(詳細: eda/{s.name}_eda.html)")
+            print(f"🚫 EDAエラーによりスキップ: {s.name}(詳細: {s.name}/eda/{s.name}_eda.html)")
         else:
             result = "failed"
             print(f"❌ 失敗: {s.name} (returncode={proc.returncode})")
@@ -153,7 +153,7 @@ def run_full_generation(
             print(proc.stdout.strip())
         if proc.returncode == constants.EXIT_OK:
             result = "success"
-            print(f"✅ 完了: full/{name}_full.binpb")
+            print(f"✅ 完了: {safe_filename(name)}/full/{name}_full.binpb")
         else:
             result = "failed"
             print(f"❌ 失敗: {name} (returncode={proc.returncode})")

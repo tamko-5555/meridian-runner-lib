@@ -244,7 +244,7 @@ def export_coefficients_csv(output_dir: str | Path) -> Path:
 
 
 def export_summary_table(output_dir: str | Path, df: pd.DataFrame | None = None) -> Path:
-    """比較テーブルを checks/ に CSV+表画像で保存する(df を渡すと再計算しない)."""
+    """比較テーブルを _all/ に CSV+表画像で保存する(df を渡すと再計算しない)."""
     if df is None:
         df = summary_table(output_dir)
     base = _all_dir(output_dir) / "all_models_summary"
