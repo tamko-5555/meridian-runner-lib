@@ -14,7 +14,7 @@ import pandas as pd
 from meridian.analysis import optimizer
 from meridian.model import model
 
-from runner_lib import constants, periods, plots, specs, tables
+from runner_lib import constants, io, periods, plots, specs, tables
 
 # 予算スイープの倍率: binpb 内の固定予算シナリオ(specs.FIXED_BUDGET_RATIOS)+ 現行(1.0)
 SWEEP_RATIOS: tuple[float, ...] = tuple(sorted({*specs.FIXED_BUDGET_RATIOS, 1.0}))
@@ -171,9 +171,9 @@ def save_optimization_artifacts(
     currency: str = "¥",
     display: bool = False,
 ) -> dict:
-    """予算最適化の成果物一式を OUTPUT_DIR/optimization/ に保存する."""
+    """予算最適化の成果物一式を OUTPUT_DIR/<setup>/optimization/ に保存する."""
     tables.setup_japanese_fonts()
-    out_dir = Path(output_dir) / constants.OPTIMIZATION_DIRNAME
+    out_dir = io.optimization_dir(output_dir, setup_name)
     out_dir.mkdir(parents=True, exist_ok=True)
     name = plots.safe_filename(setup_name)
     saved: list[Path] = []
@@ -282,19 +282,23 @@ _DISPLAY_ITEMS = (
 
 
 def display_saved(output_dir: str | Path, setup_name: str | None = None) -> None:
-    """optimization/ に保存済みの成果物をノートブック上で表示する.
+    """<setup>/optimization/ に保存済みの成果物をノートブック上で表示する.
 
     Phase 3(run_full)実行後に呼ぶ。setup_name を省略すると保存済みの
     全セットアップを順に表示する。
     """
-    opt_dir = Path(output_dir) / constants.OPTIMIZATION_DIRNAME
+    output_dir = Path(output_dir)
     suffix = "_budget_scenarios.csv"
     if setup_name:
         names = [plots.safe_filename(setup_name)]
     else:
-        names = sorted(p.name[: -len(suffix)] for p in opt_dir.glob(f"*{suffix}"))
-    if not opt_dir.is_dir() or not names:
-        print(f"最適化成果物が見つかりません: {opt_dir}")
+        names = sorted(
+            p.parent.parent.name
+            for p in output_dir.glob(f"*/{constants.OPTIMIZATION_DIRNAME}/*{suffix}")
+        )
+    found = [n for n in names if any(io.optimization_dir(output_dir, n).glob(f"*{suffix}"))]
+    if not found:
+        print(f"最適化成果物が見つかりません: {output_dir}/<setup>/optimization/")
         print("Phase 3(完全版生成)を実行すると生成されます。")
         print("実行済みなのに無い場合は、Phase 3 の実行ログを確認してください。")
         return
@@ -302,13 +306,15 @@ def display_saved(output_dir: str | Path, setup_name: str | None = None) -> None
     try:
         from IPython.display import Image, Markdown, display
     except ImportError:
-        for name in names:
+        for name in found:
+            opt_dir = io.optimization_dir(output_dir, name)
             print(f"[{name}] 保存済みファイル:")
             for p in sorted(opt_dir.glob(f"{name}_*")):
                 print(f"  {p}")
         return
 
-    for name in names:
+    for name in found:
+        opt_dir = io.optimization_dir(output_dir, name)
         display(Markdown(f"## 最適化結果: {name}"))
         for stem, caption in _DISPLAY_ITEMS:
             png = opt_dir / f"{name}_{stem}.png"

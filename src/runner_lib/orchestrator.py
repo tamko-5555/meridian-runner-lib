@@ -161,11 +161,8 @@ def run_full_generation(
 
         # 最適化成果物は run_full 内で失敗しても exit code 0 のままなので、
         # 保存物の有無を確認して結果テーブルで可視化する
-        opt_marker = (
-            Path(output_dir)
-            / constants.OPTIMIZATION_DIRNAME
-            / f"{safe_filename(name)}_budget_scenarios.csv"
-        )
+        opt_dir = io.optimization_dir(output_dir, name)
+        opt_marker = opt_dir / f"{safe_filename(name)}_budget_scenarios.csv"
         optimization_status = "saved" if opt_marker.exists() else "missing"
         if result == "success" and optimization_status == "missing":
             print(f"⚠ {name}: optimization/ が生成されていません(上のログを確認してください)")

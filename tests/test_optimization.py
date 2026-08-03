@@ -21,7 +21,7 @@ def opt_artifacts(fitted_mmm, tmp_path_factory):
 
 def test_save_optimization_artifacts_files(opt_artifacts):
     out_dir, result = opt_artifacts
-    opt_dir = out_dir / constants.OPTIMIZATION_DIRNAME
+    opt_dir = out_dir / "setup_normal" / constants.OPTIMIZATION_DIRNAME
     files = {p.name for p in opt_dir.iterdir()}
     for stem in (
         "setup_normal_budget_allocation",
