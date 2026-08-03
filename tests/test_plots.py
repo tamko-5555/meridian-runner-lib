@@ -7,7 +7,7 @@ def test_safe_filename():
 
 def test_save_all_for_dir_creates_chart_files(posterior_dir):
     plots.save_all_for_dir(posterior_dir, use_kpi=True)
-    checks_dir = posterior_dir / "checks"
+    checks_dir = posterior_dir / "setup_normal" / "checks"
     files = {p.name for p in checks_dir.iterdir()}
     # 主要チャートの存在をスモーク確認(HTML は必ず出る)
     assert any("model_fit" in f for f in files)

@@ -35,6 +35,7 @@ def test_summary_table_and_exports(posterior_dir):
     assert {"R2", "MAPE", "health_score", "review_status"} <= set(df.columns)
 
     json_path = checks.export_model_summaries_json(posterior_dir)
+    assert json_path.parent == posterior_dir / "_all"  # 横断成果物は _all/ に置く契約
     payload = json.loads(json_path.read_text())
     assert "setup_normal" in payload
     assert "coefficients" in payload["setup_normal"]

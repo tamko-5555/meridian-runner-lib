@@ -191,8 +191,8 @@ def summary_table(output_dir: str | Path) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _checks_dir(output_dir: str | Path) -> Path:
-    d = Path(output_dir) / constants.CHECKS_DIRNAME
+def _all_dir(output_dir: str | Path) -> Path:
+    d = io.all_dir(output_dir)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -209,7 +209,7 @@ def export_model_summaries_json(output_dir: str | Path) -> Path:
         }
     if not payload:
         print(f"posterior が見つかりません: {output_dir}")
-    out = _checks_dir(output_dir) / "model_summaries.json"
+    out = _all_dir(output_dir) / "model_summaries.json"
     out.write_text(
         json.dumps(
             _json_safe(payload),
@@ -228,7 +228,7 @@ def export_coefficients_csv(output_dir: str | Path) -> Path:
         df = coefficient_table(mmm)
         df.insert(0, "setup", name)
         frames.append(df)
-    out = _checks_dir(output_dir) / "all_models_coefficients.csv"
+    out = _all_dir(output_dir) / "all_models_coefficients.csv"
     if not frames:
         print(f"posterior が見つかりません: {output_dir}")
         pd.DataFrame(columns=["setup", *COEFFICIENT_COLUMNS]).to_csv(
@@ -247,6 +247,6 @@ def export_summary_table(output_dir: str | Path, df: pd.DataFrame | None = None)
     """比較テーブルを checks/ に CSV+表画像で保存する(df を渡すと再計算しない)."""
     if df is None:
         df = summary_table(output_dir)
-    base = _checks_dir(output_dir) / "all_models_summary"
+    base = _all_dir(output_dir) / "all_models_summary"
     tables.save_table_csv_and_image(df, base, title="全モデル比較テーブル")
     return base.with_suffix(".csv")

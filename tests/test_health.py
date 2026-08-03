@@ -1,4 +1,4 @@
-from runner_lib import constants, health
+from runner_lib import health
 
 
 def test_health_detail_table_lists_all_checks(fitted_mmm):
@@ -31,13 +31,15 @@ def test_export_health_artifacts(posterior_dir):
     for label in health.CHECK_LABELS_JA.values():
         assert label in matrix.columns
 
-    out = posterior_dir / constants.CHECKS_DIRNAME / constants.HEALTH_DIRNAME
+    out = posterior_dir / "setup_normal" / "checks" / "health"
     files = {p.name for p in out.iterdir()}
     assert "setup_normal_model_health_card.html" in files
     assert "setup_normal_health_checks.csv" in files
     assert "setup_normal_health_checks.png" in files
-    assert "health_checks_matrix.csv" in files
-    assert "health_checks_matrix.png" in files
+    # 横断マトリクスは _all/ に置かれる
+    all_files = {p.name for p in (posterior_dir / "_all").iterdir()}
+    assert "health_checks_matrix.csv" in all_files
+    assert "health_checks_matrix.png" in all_files
 
 
 def test_export_health_artifacts_empty_dir(tmp_path):

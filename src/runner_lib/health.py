@@ -1,7 +1,7 @@
 """モデルヘルスチェック(meridian 1.7 ModelReviewer)成果物の保存.
 
 health_score だけでなく、公式の Model Health Card HTML と、
-チェック別の判定・推奨アクションの表(CSV+表画像)を checks/health/ に保存する。
+チェック別の判定・推奨アクションの表(CSV+表画像)を <setup>/checks/health/ に保存する。
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from meridian.analysis.review import results as review_results
 from meridian.analysis.review import reviewer
 from meridian.model import model
 
-from runner_lib import checks, constants, plots, tables
+from runner_lib import checks, io, plots, tables
 
 # ModelReviewer.run()(meridian 1.7.0)が実際に実行するチェックのみ列挙する。
 # ImplausibleROI / HighVariance / PotentialBias はクラスとして存在するが
@@ -93,8 +93,8 @@ def health_detail_table(summary: review_results.ReviewSummary) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _health_dir(output_dir: str | Path) -> Path:
-    d = Path(output_dir) / constants.CHECKS_DIRNAME / constants.HEALTH_DIRNAME
+def _health_dir(output_dir: str | Path, setup_name: str) -> Path:
+    d = io.health_dir(output_dir, setup_name)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -102,15 +102,15 @@ def _health_dir(output_dir: str | Path) -> Path:
 def export_health_artifacts(output_dir: str | Path) -> pd.DataFrame:
     """全 posterior モデルのヘルスチェック成果物を保存し、比較マトリクスを返す.
 
-    保存先: checks/health/
-      - <setup>_model_health_card.html : meridian 公式ヘルスカード
-      - <setup>_health_checks.csv/.png : チェック別の判定・推奨アクション
-      - health_checks_matrix.csv/.png  : セットアップ × チェックの判定一覧
+    保存先:
+      - <setup>/checks/health/<setup>_model_health_card.html : meridian 公式ヘルスカード
+      - <setup>/checks/health/<setup>_health_checks.csv/.png : チェック別の判定・推奨アクション
+      - _all/health_checks_matrix.csv/.png : セットアップ × チェックの判定一覧
     """
-    out = _health_dir(output_dir)
     matrix_rows = []
     for name, mmm in checks._iter_posteriors(output_dir):
         safe = plots.safe_filename(name)
+        out = _health_dir(output_dir, name)
         try:
             summary = run_review(mmm)
         except Exception as e:
@@ -144,7 +144,9 @@ def export_health_artifacts(output_dir: str | Path) -> pd.DataFrame:
         return pd.DataFrame()
 
     matrix = pd.DataFrame(matrix_rows)
+    all_out = io.all_dir(output_dir)
+    all_out.mkdir(parents=True, exist_ok=True)
     tables.save_table_csv_and_image(
-        matrix, out / "health_checks_matrix", title="全モデル ヘルスチェック一覧"
+        matrix, all_out / "health_checks_matrix", title="全モデル ヘルスチェック一覧"
     )
     return matrix

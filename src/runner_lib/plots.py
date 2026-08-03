@@ -241,10 +241,10 @@ def save_media_charts(
 
 def save_all_for_dir(output_dir, use_kpi: bool = True, display: bool = False) -> None:
     output_dir = Path(output_dir)
-    checks_dir = output_dir / constants.CHECKS_DIRNAME
     prefix = constants.POSTERIOR_PREFIX
     for p in sorted(output_dir.glob(f"{prefix}*.binpb")):
         setup_name = p.stem[len(prefix) :]
+        checks_dir = io.checks_dir(output_dir, setup_name)
         print(f"\n{'=' * 50}\n📊 Setup: {setup_name}\n{'=' * 50}")
         try:
             mmm = io.load_meridian_flexible(p)
