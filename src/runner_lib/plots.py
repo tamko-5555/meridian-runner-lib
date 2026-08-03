@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import altair as alt
@@ -15,9 +14,7 @@ from runner_lib import constants, io, tables
 
 alt.data_transformers.disable_max_rows()
 
-
-def safe_filename(name: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_")
+safe_filename = io.safe_filename  # 後方互換 alias(既存呼び出し箇所のため)
 
 
 def _display(obj) -> None:

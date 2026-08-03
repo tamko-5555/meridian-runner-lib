@@ -10,3 +10,5 @@ CHECKS_DIRNAME = "checks"
 FULL_DIRNAME = "full"
 OPTIMIZATION_DIRNAME = "optimization"
 HEALTH_DIRNAME = "health"  # checks/health/ に配置
+ALL_DIRNAME = "_all"  # 横断比較(全セットアップ1枚もの)
+SUMMARY_DIRNAME = "summary"  # 意思決定用の主要グラフ集約

@@ -29,6 +29,26 @@ def test_paths():
     assert io.geo_json_path("/o", "s1").as_posix().endswith("full/s1_geo.json")
 
 
+def test_setup_scoped_paths(tmp_path):
+    assert io.setup_dir(tmp_path, "s1") == tmp_path / "s1"
+    assert io.eda_json_path(tmp_path, "s1") == tmp_path / "s1" / "eda" / "s1_eda.json"
+    assert io.eda_html_path(tmp_path, "s1") == tmp_path / "s1" / "eda" / "s1_eda.html"
+    assert io.full_binpb_path(tmp_path, "s1") == tmp_path / "s1" / "full" / "s1_full.binpb"
+    assert io.geo_json_path(tmp_path, "s1") == tmp_path / "s1" / "full" / "s1_geo.json"
+    assert io.checks_dir(tmp_path, "s1") == tmp_path / "s1" / "checks"
+    assert io.health_dir(tmp_path, "s1") == tmp_path / "s1" / "checks" / "health"
+    assert io.optimization_dir(tmp_path, "s1") == tmp_path / "s1" / "optimization"
+    assert io.all_dir(tmp_path) == tmp_path / "_all"
+    assert io.summary_dir(tmp_path) == tmp_path / "summary"
+    # posterior はルート直下のまま(スキップ判定の契約)
+    assert io.posterior_path(tmp_path, "s1") == tmp_path / "posterior_s1.binpb"
+
+
+def test_setup_dir_sanitizes_name(tmp_path):
+    assert io.setup_dir(tmp_path, "a/b c") == tmp_path / "a_b_c"
+    assert io.safe_filename("ab/c d:e") == "ab_c_d_e"
+
+
 def test_list_setups_status(tmp_path):
     inp = tmp_path / "in"
     out = tmp_path / "out"
@@ -41,8 +61,9 @@ def test_list_setups_status(tmp_path):
     (inp / f"{constants.POSTERIOR_PREFIX}stray.binpb").write_bytes(b"x")
     # a: posterior 済み
     (out / "posterior_setup_a.binpb").write_bytes(b"x")
-    # b: EDA エラー記録あり
-    (out / constants.EDA_DIRNAME).mkdir()
-    (out / constants.EDA_DIRNAME / "setup_b_eda.json").write_text(json.dumps({"has_error": True}))
+    # b: EDA エラー記録あり（セットアップスコープ構造）
+    eda_path = io.eda_json_path(out, "setup_b")
+    eda_path.parent.mkdir(parents=True, exist_ok=True)
+    eda_path.write_text(json.dumps({"has_error": True}))
     statuses = {s.name: s.status for s in io.list_setups(inp, out)}
     assert statuses == {"setup_a": "done", "setup_b": "eda_error", "setup_c": "pending"}

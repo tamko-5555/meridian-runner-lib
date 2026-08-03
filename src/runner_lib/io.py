@@ -6,6 +6,7 @@ from runner_lib import compat  # noqa: F401  # import 時に xarray の互換対
 
 import dataclasses
 import json
+import re
 from pathlib import Path
 
 from google.protobuf.message import DecodeError
@@ -16,6 +17,43 @@ from mmm.v1.model import mmm_kernel_pb2 as kernel_pb
 from mmm.v1.model.meridian import meridian_model_pb2 as meridian_pb
 
 from runner_lib import constants
+
+
+def safe_filename(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_")
+
+
+def setup_dir(output_dir: str | Path, setup_name: str) -> Path:
+    """セットアップ単位の成果物ルート: OUTPUT_DIR/<setup>/"""
+    return Path(output_dir) / safe_filename(setup_name)
+
+
+def eda_dir(output_dir: str | Path, setup_name: str) -> Path:
+    return setup_dir(output_dir, setup_name) / constants.EDA_DIRNAME
+
+
+def checks_dir(output_dir: str | Path, setup_name: str) -> Path:
+    return setup_dir(output_dir, setup_name) / constants.CHECKS_DIRNAME
+
+
+def health_dir(output_dir: str | Path, setup_name: str) -> Path:
+    return checks_dir(output_dir, setup_name) / constants.HEALTH_DIRNAME
+
+
+def full_dir(output_dir: str | Path, setup_name: str) -> Path:
+    return setup_dir(output_dir, setup_name) / constants.FULL_DIRNAME
+
+
+def optimization_dir(output_dir: str | Path, setup_name: str) -> Path:
+    return setup_dir(output_dir, setup_name) / constants.OPTIMIZATION_DIRNAME
+
+
+def all_dir(output_dir: str | Path) -> Path:
+    return Path(output_dir) / constants.ALL_DIRNAME
+
+
+def summary_dir(output_dir: str | Path) -> Path:
+    return Path(output_dir) / constants.SUMMARY_DIRNAME
 
 
 def load_meridian_flexible(file_path: str | Path) -> model.Meridian:
@@ -36,19 +74,19 @@ def posterior_path(output_dir: str | Path, setup_name: str) -> Path:
 
 
 def eda_json_path(output_dir: str | Path, setup_name: str) -> Path:
-    return Path(output_dir) / constants.EDA_DIRNAME / f"{setup_name}_eda.json"
+    return eda_dir(output_dir, setup_name) / f"{setup_name}_eda.json"
 
 
 def eda_html_path(output_dir: str | Path, setup_name: str) -> Path:
-    return Path(output_dir) / constants.EDA_DIRNAME / f"{setup_name}_eda.html"
+    return eda_dir(output_dir, setup_name) / f"{setup_name}_eda.html"
 
 
 def full_binpb_path(output_dir: str | Path, setup_name: str) -> Path:
-    return Path(output_dir) / constants.FULL_DIRNAME / f"{setup_name}_full.binpb"
+    return full_dir(output_dir, setup_name) / f"{setup_name}_full.binpb"
 
 
 def geo_json_path(output_dir: str | Path, setup_name: str) -> Path:
-    return Path(output_dir) / constants.FULL_DIRNAME / f"{setup_name}_geo.json"
+    return full_dir(output_dir, setup_name) / f"{setup_name}_geo.json"
 
 
 def save_posterior(mmm: model.Meridian, output_dir: str | Path, setup_name: str) -> Path:
