@@ -26,11 +26,38 @@ def _display(obj) -> None:
         pass
 
 
+def _spec_with_fixed_fonts(chart, font: str) -> dict:
+    """チャートスペック内の全フォント指定を登録済みフォントに置き換えた dict を返す.
+
+    meridian のチャートは "Google Sans Display" / "Roboto" を明示指定しており、
+    これらが存在しない環境(Colab 等の Linux)では vl-convert がフォントを
+    代替せず、テキストを一切描画しない(軸ラベル・目盛・凡例が消える)。
+    PNG で確実に描画されるよう、明示指定と既定の両方を固定する。
+    """
+    spec = chart.to_dict()
+
+    def walk(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if isinstance(value, str) and (key == "font" or key.endswith("Font")):
+                    node[key] = font
+                else:
+                    walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(spec)
+    spec.setdefault("config", {})["font"] = font
+    return spec
+
+
 def save_chart(
     chart, out_base: Path, title: str | None = None, display: bool = False
 ) -> list[Path]:
     if chart is None:
         return []
+    tables.setup_japanese_fonts()
     if title is not None:
         try:
             chart = chart.properties(title=title)
@@ -39,13 +66,30 @@ def save_chart(
     if display:
         _display(chart)
     saved = []
-    for suffix in (".png", ".html"):
-        path = out_base.with_suffix(suffix)
+
+    png_path = out_base.with_suffix(".png")
+    try:
+        import json
+
+        import vl_convert as vlc
+
+        spec = _spec_with_fixed_fonts(chart, tables.JP_FONT)
+        png_path.write_bytes(vlc.vegalite_to_png(json.dumps(spec), scale=2))
+        saved.append(png_path)
+    except Exception as e:
+        # フォント固定に失敗した場合は従来経路で保存を試みる
         try:
-            chart.save(str(path))
-            saved.append(path)
-        except Exception as e:
-            print(f"  ⚠ {path.name} の保存をスキップ: {type(e).__name__}")
+            chart.save(str(png_path))
+            saved.append(png_path)
+        except Exception:
+            print(f"  ⚠ {png_path.name} の保存をスキップ: {type(e).__name__}")
+
+    html_path = out_base.with_suffix(".html")
+    try:
+        chart.save(str(html_path))
+        saved.append(html_path)
+    except Exception as e:
+        print(f"  ⚠ {html_path.name} の保存をスキップ: {type(e).__name__}")
     return saved
 
 
