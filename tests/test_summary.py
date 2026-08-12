@@ -1,4 +1,80 @@
-from runner_lib import summary
+from pathlib import Path
+
+import pandas as pd
+
+from runner_lib import dorega_tokens, summary
+
+
+def _sample_roi_df():
+    return pd.DataFrame(
+        {
+            "geo": ["tokyo", "osaka", "fukuoka"],
+            "roi": [1.5, 0.8, 1.0],
+            "incremental": [100.0, 50.0, 30.0],
+        }
+    )
+
+
+def _find_layer(spec, mark_type):
+    for layer in spec["layer"]:
+        if layer["mark"]["type"] == mark_type:
+            return layer
+    raise AssertionError(f"{mark_type} レイヤーが見つかりません")
+
+
+def _sample_chart():
+    return summary._geo_roi_chart(_sample_roi_df(), "setup_normal", "2024-01-01〜2024-12-31")
+
+
+def test_geo_roi_chart_colors_roi_at_or_above_1_with_series0():
+    color = _find_layer(_sample_chart().to_dict(), "bar")["encoding"]["color"]
+    assert color["condition"]["test"] == "(datum.roi >= 1)"
+    assert color["condition"]["value"] == dorega_tokens.SERIES[0]
+    assert color["value"] == dorega_tokens.BASELINE_GRAY
+
+
+def test_geo_roi_chart_has_dashed_breakeven_rule():
+    rule = _find_layer(_sample_chart().to_dict(), "rule")
+    assert rule["mark"]["strokeDash"] == [4, 4]
+    assert rule["mark"]["color"] == dorega_tokens.MUTED
+
+
+def test_geo_roi_chart_has_breakeven_annotation_text():
+    spec = _sample_chart().to_dict()
+    labels = {
+        record.get("label")
+        for dataset in spec["datasets"].values()
+        for record in dataset
+        if "label" in record
+    }
+    assert "ROI=1(投資回収ライン)" in labels
+
+
+def test_geo_roi_chart_axis_shows_horizontal_grid_only():
+    bar = _find_layer(_sample_chart().to_dict(), "bar")
+    x_axis = bar["encoding"]["x"]["axis"]
+    y_axis = bar["encoding"]["y"]["axis"]
+    assert x_axis["grid"] is False
+    assert x_axis["domain"] is False
+    assert x_axis["ticks"] is False
+    assert y_axis["grid"] is True
+    assert y_axis["domain"] is False
+    assert y_axis["ticks"] is False
+
+
+def test_geo_roi_chart_title_and_subtitle_style():
+    title = _sample_chart().to_dict()["title"]
+    assert title["fontSize"] == dorega_tokens.TITLE_FONT_SIZE
+    assert title["fontWeight"] == "bold"
+    assert title["subtitleFontSize"] == dorega_tokens.SUBTITLE_FONT_SIZE
+    assert "2024-01-01〜2024-12-31" in title["subtitle"]
+    assert "setup_normal" in title["subtitle"]
+
+
+def test_summary_module_has_no_hardcoded_hex_colors():
+    source = Path(summary.__file__).read_text(encoding="utf-8")
+    assert "#d62728" not in source
+    assert "#4c78a8" not in source
 
 
 def test_geo_roi_frame_has_one_row_per_geo(fitted_mmm):
