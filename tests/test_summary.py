@@ -93,6 +93,37 @@ def test_save_geo_roi_chart_creates_files(fitted_mmm, tmp_path):
     assert all(p.parent == tmp_path / "summary" for p in saved)
 
 
+def test_save_geo_roi_chart_creates_material_and_insight_variants(fitted_mmm, tmp_path):
+    saved = summary.save_geo_roi_chart(fitted_mmm, "setup_normal", tmp_path)
+    stems = {p.stem for p in saved}
+    # 素材版(基本名)と insight版(`_insight` サフィックス)の両方が生成される
+    assert "setup_normal_geo_roi" in stems
+    assert "setup_normal_geo_roi_insight" in stems
+
+
+def test_geo_roi_insight_title_generated_from_measured_values():
+    title = summary._geo_roi_insight_title(_sample_roi_df())
+    # roi [1.5, 0.8, 1.0] のうち ROI>=1 は2地域(全3地域中)
+    assert title == "広告費を回収できているのは3地域中2地域だけ"
+
+
+def test_geo_roi_insight_title_none_when_conclusion_uncomputable():
+    empty_df = pd.DataFrame(columns=["geo", "roi", "incremental"])
+    assert summary._geo_roi_insight_title(empty_df) is None
+
+
+def test_save_geo_roi_chart_skips_insight_when_conclusion_uncomputable(
+    fitted_mmm, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(summary, "_geo_roi_insight_title", lambda df: None)
+    saved = summary.save_geo_roi_chart(fitted_mmm, "setup_normal", tmp_path)
+    names = {p.name for p in saved}
+    assert names  # 素材版は生成される
+    assert all("insight" not in name for name in names)
+    assert any(name.startswith("setup_normal_geo_roi.") for name in names)
+    assert "⚠" in capsys.readouterr().out
+
+
 def test_build_summary_copies_key_charts(fitted_mmm, tmp_path):
     name = "setup_normal"
     # 複製元を用意(実物と同名のダミーPNG)
@@ -119,6 +150,7 @@ def test_build_summary_copies_key_charts(fitted_mmm, tmp_path):
     assert f"{name}_budget_scenarios.png" in copied
     assert f"{name}_budget_scenarios_chart.png" in copied
     assert f"{name}_geo_roi.png" in copied  # fixture は geo モデル
+    assert f"{name}_geo_roi_insight.png" in copied
     assert result["missing"] == []
 
 

@@ -16,6 +16,7 @@ from meridian.model import model
 from runner_lib import dorega_tokens, full_binpb, io, periods, plots, tables
 
 _ROI_BREAKEVEN_LABEL = "ROI=1(投資回収ライン)"
+_GEO_ROI_BASE_TITLE = "地域別ROI(全チャネル合計)"
 
 
 def _analysis_period(mmm: model.Meridian) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.Timestamp]:
@@ -35,7 +36,23 @@ def geo_roi_frame(mmm: model.Meridian) -> pd.DataFrame:
     )
 
 
-def _geo_roi_chart(df: pd.DataFrame, setup_name: str, period_label: str) -> alt.LayerChart:
+def _geo_roi_insight_title(df: pd.DataFrame) -> str | None:
+    """ROI実測値から結論見出しを生成する。結論を計算できない場合は None."""
+    if df.empty or df["roi"].isna().all():
+        return None
+    total = len(df)
+    breakeven = int((df["roi"] >= 1).sum())
+    if breakeven == total:
+        return f"広告費を回収できているのは{total}地域中{breakeven}地域"
+    return f"広告費を回収できているのは{total}地域中{breakeven}地域だけ"
+
+
+def _geo_roi_chart(
+    df: pd.DataFrame,
+    setup_name: str,
+    period_label: str,
+    title_text: str = _GEO_ROI_BASE_TITLE,
+) -> alt.LayerChart:
     """横バー。ROI≥1(投資回収済み)の地域を強調し、ROI=1に基準線を引いて回収ラインを示す."""
     bar = (
         alt.Chart(df)
@@ -80,7 +97,7 @@ def _geo_roi_chart(df: pd.DataFrame, setup_name: str, period_label: str) -> alt.
     return (bar + rule + annotation).properties(
         height=alt.Step(14),
         title=alt.TitleParams(
-            text="地域別ROI: どの地域で広告が効いているか",
+            text=title_text,
             subtitle=f"{period_label} ・ {setup_name}",
             font=tables.JP_FONT,
             subtitleFont=tables.JP_FONT,
@@ -94,7 +111,11 @@ def _geo_roi_chart(df: pd.DataFrame, setup_name: str, period_label: str) -> alt.
 
 
 def save_geo_roi_chart(mmm: model.Meridian, setup_name: str, output_dir: str | Path) -> list[Path]:
-    """summary/ に地域別ROIバーを保存する。national モデルは対象外(空リスト)."""
+    """summary/ に地域別ROIバーを保存する。national モデルは対象外(空リスト).
+
+    素材版(基本タイトル)と insight版(実測値から生成した結論タイトル、`_insight`
+    サフィックス)の2形態を保存する。結論が計算できない場合は素材版のみ保存する。
+    """
     if mmm.model_context.is_national:
         print(f"  ⏭ {setup_name}: national モデルのため地域別ROIグラフは対象外")
         return []
@@ -105,10 +126,24 @@ def save_geo_roi_chart(mmm: model.Meridian, setup_name: str, output_dir: str | P
     df = geo_roi_frame(mmm)
     _, start, end = _analysis_period(mmm)
     period_label = f"{start:%Y-%m-%d}〜{end:%Y-%m-%d}"
-    return plots.save_chart(
-        _geo_roi_chart(df, setup_name, period_label),
-        out_dir / f"{name}_geo_roi",
+
+    files = list(
+        plots.save_chart(
+            _geo_roi_chart(df, setup_name, period_label),
+            out_dir / f"{name}_geo_roi",
+        )
     )
+
+    insight_title = _geo_roi_insight_title(df)
+    if insight_title is None:
+        print(f"  ⚠ {setup_name}: 結論を算出できないため insight 版はスキップ(素材版のみ保存)")
+        return files
+
+    files += plots.save_chart(
+        _geo_roi_chart(df, setup_name, period_label, insight_title),
+        out_dir / f"{name}_geo_roi_insight",
+    )
+    return files
 
 
 # 複製する成果物: (元フォルダ種別, ファイル名stem)。①と③④に対応(②は新規生成)
