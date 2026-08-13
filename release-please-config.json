@@ -3,6 +3,7 @@
     ".": {
       "release-type": "python",
       "package-name": "meridian-runner-lib",
+      "component": "",
       "include-v-in-tag": true
     }
   }
